@@ -27,6 +27,7 @@ Models:
  **Links**
  
  Datasets:
- * with Baidu Drive: 
+ * Baidu Drive: 
  https://pan.baidu.com/s/1Z9m7S8F8Erz3Vk0bld0BkQ
- 
+ * Google Drive:
+ https://drive.google.com/open?id=17SZpopgw7NQcPGgGnKJo7yfM1vYg7NJk
