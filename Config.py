@@ -188,10 +188,11 @@ class TransH_config():
 
 class TransA_config():
     def __init__(self):
-        self.margin = 2.0
-        self.hidden_size = 100
+        self.margin = 3.2
+        self.hidden_size = 200
         self.L = 2
-        self.regularization = 1.0
+        self.lamb = 0.01
+        self.regularization = 0.2
 
         self.entTotal = 0
         self.relTotal = 0

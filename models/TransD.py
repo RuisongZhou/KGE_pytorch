@@ -111,3 +111,4 @@ class TransD(nn.Module):
     def norm_loss(self,h,r,t,h_transfer,t_transfer,r_transfer):
         loss = h.norm(self.config.L) + r.norm(self.config.L) + t.norm(self.config.L)  \
                 + h_transfer.norm(self.config.L) + t_transfer.norm(self.config.L) + r_transfer.norm(self.config.L)
+        return loss

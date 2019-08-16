@@ -13,6 +13,7 @@ Models:
  - [x] TransD
  - [ ] TransA
  - [x] ConvE
+ - [ ] SimplE
  - [x] RotatE
  
  **Usage**
