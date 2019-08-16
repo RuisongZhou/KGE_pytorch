@@ -19,16 +19,6 @@ class RotatEModel(TrainBase):
         self.model = RotatE.RotatE(self.args.modelparam)
         print(self.model)
 
-    def load_model(self):
-        print("INFO : Loading pre-training model!")
-        modelType = os.path.splitext(self.args.premodel)[-1]
-        if modelType == ".param":
-            self.model.load_state_dict(torch.load(self.args.premodel))
-        elif modelType == ".model":
-            self.model = torch.load(self.args.premodel)
-        else:
-            print("ERROR : Model type %s is not supported!" % self.args.premodel)
-            exit(1)
 
     def get_iterator(self):
         train_dataloader_head = DataLoader(
@@ -111,10 +101,10 @@ class RotatEModel(TrainBase):
                             epoch + 1, epochs, step, lossVal, minLoss))
                     step += 1
                     globalstep += 1
-                    self.sumwriter.add_scalar('train/loss', lossVal, global_step=globalstep)
-                    self.sumwriter.add_scalar('train/positive_sample_loss', pl, global_step=globalstep)
-                    self.sumwriter.add_scalar('train/negative_sample_loss', nl, global_step=globalstep)
-                    self.sumwriter.add_scalar('train/lr', lr, global_step=globalstep)
+                    self.sumwriter.add_scalar('RotatE/train/loss', lossVal, global_step=globalstep)
+                    self.sumwriter.add_scalar('RotatE/train/positive_sample_loss', pl, global_step=globalstep)
+                    self.sumwriter.add_scalar('RotatE/train/negative_sample_loss', nl, global_step=globalstep)
+                    self.sumwriter.add_scalar('RotatE/train/lr', lr, global_step=globalstep)
 
             if globalepoch % self.args.lrdecayepoch == 0:
                 adjust_learning_rate(optimizer, decay=self.args.lrdecay)
@@ -132,9 +122,7 @@ class RotatEModel(TrainBase):
                     for data in test_dataloader:
                         evalstep += 1
                         if self.args.usegpu:
-                            data = Variable(torch.LongTensor(data).cuda())
-                        else:
-                            data = Variable(torch.LongTensor(data))
+                            data = data.cuda()
 
                         ranks, hit1, hit10 = model.eval_model(data, mode=mode)
                         if evalstep % 1000 == 0:
@@ -152,7 +140,13 @@ class RotatEModel(TrainBase):
                     self.sumwriter.add_scalar('RotatE/test/hit@10', hit10_, global_step=epoch + 1)
                     self.sumwriter.add_scalar('RotatE/test/hit@1', hit1_, global_step=epoch + 1)
                     self.sumwriter.add_scalar('RotatE/test/MR', mr, global_step=epoch + 1)
-                self.save_model(mr, hit10_, model)
+                variable_list = {
+                    'step': globalstep,
+                    'lr': lr,
+                    'MR': mr,
+                    'hit@10': hit10_
+                }
+                self.save_model(model, optimizer, variable_list)
 
 
 if __name__ == '__main__':
@@ -166,4 +160,10 @@ if __name__ == '__main__':
     util.printArgs(config)
     util.printArgs(config.modelparam)
     model = RotatEModel(config)
-    model.train()
+
+    if config.init_checkpoint:
+        optimizer = model.load_opt(model.model)
+        model.load_model(model.model, optimizer)
+        model.fit(model.model, optimizer)
+    else:
+        model.train()

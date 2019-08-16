@@ -15,6 +15,7 @@ class UniformDataSet(Dataset):
     '''
     the negative samples are subject to uniform distribution
     '''
+
     def __init__(self, datapath, rephead=0.5, reptail=0.5):
         super(Dataset, self).__init__()
         self.dataPath = datapath
@@ -36,7 +37,6 @@ class UniformDataSet(Dataset):
 
     def __getitem__(self, item):
         return self.data[item], self.negData[item]
-
 
     # [TODO] Use KBGAN
     def generate_neg_samples(self, rephead, reptail):
@@ -87,6 +87,13 @@ class UniformDataSet(Dataset):
 
 
 class AdversarialDataset(Dataset):
+    '''
+    This negative sample generate method is come from RotatE.
+    They sample negative triples from the following distribution:
+    p\left(h_{j}^{\prime}, r, t_{j}^{\prime} |\left\{\left(h_{i}, r_{i}, t_{i}\right)\right\}\right)=\frac{\exp \alpha f_{r}\left(\mathbf{h}_{j}^{\prime},
+     \mathbf{t}_{j}^{\prime}\right)}{\sum_{i} \exp \alpha f_{r}\left(\mathbf{h}_{i}^{\prime}, \mathbf{t}_{i}^{\prime}\right)}
+    '''
+
     def __init__(self, datapath, ent_num, mode='tail-batch'):
         super(Dataset, self).__init__()
         self.dataPath = datapath
@@ -153,8 +160,8 @@ class AdversarialDataset(Dataset):
         tirples = []
         with open(self.dataPath) as f:
             for line in f:
-                h,t,r = line.strip().split('\t')
-                tirples.append([h,r,t])
+                h, t, r = line.strip().split('\t')
+                tirples.append([h, r, t])
             tirples = [tuple(map(int, i)) for i in tirples]
         return tirples
 
