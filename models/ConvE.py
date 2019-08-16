@@ -6,12 +6,13 @@ from torch.nn import Parameter
 from torch.nn.init import xavier_normal_
 import numpy as np
 
+
 class ConvE(nn.Module):
-    def __init__(self,config):
+    def __init__(self, config):
         super(ConvE, self).__init__()
         self.config = config
 
-        self.ent_embeddings = nn.Embedding(self.config.entTotal, self.config.hidden_size) #must be 200
+        self.ent_embeddings = nn.Embedding(self.config.entTotal, self.config.hidden_size)  # must be 200
         self.rel_embeddings = nn.Embedding(self.config.relTotal, self.config.hidden_size)
         self.inp_drop = torch.nn.Dropout(config.input_dropout)
         self.hidden_drop = torch.nn.Dropout(config.dropout)
@@ -53,9 +54,12 @@ class ConvE(nn.Module):
         x = torch.mm(x, self.ent_embeddings.weight.transpose(1, 0))
         x += self.b.expand_as(x)
         pred = F.sigmoid(x)
+        if self.config.usegpu:
+            one_hot = torch.zeros(self.config.batch_size, self.config.entTotal).scatter_(1, batch_t.cpu(), 1).cuda()
+        else:
+            one_hot = torch.zeros(self.config.batch_size, self.config.entTotal).scatter_(1, batch_t.cpu(), 1)
 
-        one_hot = torch.zeros(self.config.batch_size, self.config.entTotal).scatter_(1, batch_t.cpu(), 1).cuda()
-        one_hot = ((1.0-self.config.label_smoothing_epsilon)*one_hot) + (1.0/one_hot.size(1))
+        one_hot = ((1.0 - self.config.label_smoothing_epsilon) * one_hot) + (1.0 / one_hot.size(1))
         loss = self.loss(pred, one_hot)
 
         return loss
@@ -83,22 +87,24 @@ class ConvE(nn.Module):
         x += self.b.expand_as(x)
         pred = F.sigmoid(x)
 
-        maxvalues, argsort = torch.sort(pred,dim=1,descending=True)
+        maxvalues, argsort = torch.sort(pred, dim=1, descending=True)
+
         batch_t = batch_t.cpu().numpy()
         argsort = argsort.cpu().numpy()
+
         ranks = []
         hit10 = 0
         hit1 = 0
         for i in range(len(batch_t)):
-            rank = np.where(argsort[i] == batch_t[i,0].item())[0][0]
+            rank = np.where(argsort[i] == batch_t[i, 0].item())[0][0]
             ranks.append(rank)
-            if rank<10:
-                hit10+=1
-            if rank<1:
-                hit1 +=1
+            if rank < 10:
+                hit10 += 1
+            if rank < 1:
+                hit1 += 1
 
-        rank = sum(ranks)/len(batch_t)
-        hit10 /=len(batch_t)
+        rank = sum(ranks) / len(batch_t)
+        hit10 /= len(batch_t)
         hit1 /= len(batch_t)
 
         return rank, hit10, hit1

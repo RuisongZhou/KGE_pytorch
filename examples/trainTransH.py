@@ -26,6 +26,7 @@ if __name__ == '__main__':
     config.model = 'TransH'
     config.init()
     util.printArgs(config)
+    util.printArgs(config.modelparam)
 
     model = TransHModel(config)
     optimizer = model.load_opt(model.model)
