@@ -40,13 +40,13 @@ class TransH(nn.Module):
         else:
             y = Variable(torch.Tensor([self.config.margin]))
 
-        marginloss =  torch.sum(F.relu(input=p_score - n_score + y)) / self.config.batch_size
-        entityloss = torch.sum(F.relu(torch.norm(self.ent_embeddings.weight, p=2, dim=1, keepdim=False)-1))
+        marginloss = torch.sum(F.relu(input=p_score - n_score + y)) / self.config.batch_size
+        entityloss = torch.sum(F.relu(torch.norm(self.ent_embeddings.weight, p=2, dim=1, keepdim=False) - 1))
         orthLoss = torch.sum(
             F.relu(torch.sum(self.norm_vector.weight * self.rel_embeddings.weight, dim=1, keepdim=False) / \
                    torch.norm(self.rel_embeddings.weight, p=2, dim=1, keepdim=False) - self.config.eps ** 2))
 
-        return marginloss +self.config.C*(entityloss/self.config.entTotal + orthLoss/self.config.relTotal)
+        return marginloss + self.config.C * (entityloss / self.config.entTotal + orthLoss / self.config.relTotal)
 
     def forward(self, input):
         batch_h, batch_r, batch_t = torch.chunk(input=input, chunks=3, dim=1)
@@ -68,21 +68,6 @@ class TransH(nn.Module):
     def get_negative_score(self, score):
         negative_score = score[self.config.batch_size:self.config.batch_seq_size]
         return negative_score
-
-    def normalizeEmbedding(self):
-        # self.ent_embeddings.weight.data.copy_(torch.renorm(input=self.ent_embeddings.weight.detach().cpu(),
-        #                                                    p=2,
-        #                                                    dim=0,
-        #                                                    maxnorm=1.0))
-        # self.rel_embeddings.weight.data.copy_(torch.renorm(input=self.rel_embeddings.weight.detach().cpu(),
-        #                                                    p=2,
-        #                                                    dim=0,
-        #                                                    maxnorm=1.0))
-        # self.norm_vector.weight.data.copy_(torch.renorm(input=self.norm_vector.weight.detach().cpu(),
-        #                                                 p=2,
-        #                                                 dim=0,
-        #                                                 maxnorm=1.0))
-        pass
 
     def eval_model(self, input):
         batch_h, batch_r, batch_t = torch.chunk(input=input, chunks=3, dim=1)
@@ -115,4 +100,3 @@ class TransH(nn.Module):
         return {"entityEmbed": self.ent_embeddings.weight.detach().cpu().numpy(),
                 "relationEmbed": self.rel_embeddings.weight.detach().cpu().numpy(),
                 "norm_vector": self.norm_vector.weight.detach().cpu().numpy()}
-
