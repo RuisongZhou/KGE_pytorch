@@ -57,7 +57,7 @@ class TransD(nn.Module):
         score = self._calc(h, t, r)
         p_score = self.get_positive_score(score)
         n_score = self.get_negative_score(score)
-        normlosses = normLoss(h)+normLoss(r)+normLoss(t)+normLoss(h_transfer)+normLoss(t_transfer)+normLoss(r_transfer)
+        normlosses = self.norm_loss(h,r,t,h_transfer,r_transfer,t_transfer)
         return self.loss(p_score, n_score) + normlosses
 
     def get_positive_score(self, score):
@@ -67,25 +67,6 @@ class TransD(nn.Module):
         negative_score = score[self.config.batch_size:self.config.batch_seq_size]
         return negative_score
 
-    def normalizeEmbedding(self):
-        # self.ent_embeddings.weight.data.copy_(torch.renorm(input=self.ent_embeddings.weight.detach().cpu(),
-        #                                                    p=2,
-        #                                                    dim=0,
-        #                                                    maxnorm=1.0))
-        # self.rel_embeddings.weight.data.copy_(torch.renorm(input=self.rel_embeddings.weight.detach().cpu(),
-        #                                                    p=2,
-        #                                                    dim=0,
-        #                                                    maxnorm=1.0))
-
-        # self.ent_transfer.weight.data.copy_(torch.renorm(input=self.ent_transfer.weight.detach().cpu(),
-        #                                                    p=2,
-        #                                                    dim=0,
-        #                                                    maxnorm=1.0))
-        # self.rel_transfer.weight.data.copy_(torch.renorm(input=self.rel_transfer.weight.detach().cpu(),
-        #                                                    p=2,
-        #                                                    dim=0,
-        #                                                    maxnorm=1.0))
-        pass
 
     def eval_model(self, input):
         batch_h, batch_r, batch_t = torch.chunk(input=input, chunks=3, dim=1)
@@ -103,8 +84,6 @@ class TransD(nn.Module):
         mutmat.shape = (ent,1)
         emb_ent.shape = (ent, hidden_size)
         '''
-
-
         emb_ent = self._transfer(self.ent_embeddings.weight.data, self.ent_transfer.weight.data, r_transfer.squeeze(dim=1))
 
         targetLoss = torch.norm(h + r - t, self.L)
@@ -128,3 +107,7 @@ class TransD(nn.Module):
                 "relationEmbed": self.rel_embeddings.weight.detach().cpu().numpy(),
                 "entityTransfer": self.ent_transfer.weight.detach().cpu().numpy(),
                 "relationTransfer": self.rel_transfer.weight.detach().cpu().numpy()}
+
+    def norm_loss(self,h,r,t,h_transfer,t_transfer,r_transfer):
+        loss = h.norm(self.config.L) + r.norm(self.config.L) + t.norm(self.config.L)  \
+                + h_transfer.norm(self.config.L) + t_transfer.norm(self.config.L) + r_transfer.norm(self.config.L)
