@@ -11,9 +11,8 @@ class RotatE(nn.Module):
     def __init__(self, config):
         super(RotatE, self).__init__()
         self.config = config
-        self.mode = config.mode
         self.ent_embeddings = nn.Embedding(self.config.entTotal, self.config.hidden_size*2)
-        self.rel_embeddings = nn.Embedding(self.config.relTotal, self.config.hidden_size*2)
+        self.rel_embeddings = nn.Embedding(self.config.relTotal, self.config.hidden_size)
 
         self.epsilon = 2.0
         self.gamma = nn.Parameter(
@@ -26,8 +25,20 @@ class RotatE(nn.Module):
             requires_grad=False
         )
 
+    def init_weight(self):
+        nn.init.uniform_(
+            tensor=self.ent_embeddings,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
 
-    def forward(self, input):
+        nn.init.uniform_(
+            tensor=self.rel_embeddings,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+    def forward(self, input, mode):
         batch_h, batch_r, batch_t = torch.chunk(input=input, chunks=3, dim=1)
         h = self.ent_embeddings(batch_h)
         t = self.ent_embeddings(batch_t)
@@ -36,14 +47,14 @@ class RotatE(nn.Module):
         re_head, im_head = torch.chunk(h, 2, dim=2)
         re_tail, im_tail = torch.chunk(t, 2, dim=2)
 
-        # Make phases of relations uniformly distributed in [-pi, pi]
 
+        # Make phases of relations uniformly distributed in [-pi, pi]
         phase_relation = r / (self.embedding_range.item() / pi)
 
         re_relation = torch.cos(phase_relation)
         im_relation = torch.sin(phase_relation)
 
-        if self.mode == 'head-batch':
+        if mode == 'head-batch':
             re_score = re_relation * re_tail + im_relation * im_tail
             im_score = re_relation * im_tail - im_relation * re_tail
             re_score = re_score - re_head
@@ -54,31 +65,41 @@ class RotatE(nn.Module):
             re_score = re_score - re_tail
             im_score = im_score - im_tail
 
-        pos_re = self.get_positive_score(re_score)
-        neg_re = self.get_negative_score(re_score)
-        pos_im = self.get_positive_score(im_score)
-        neg_im = self.get_negative_score(im_score)
+        score = torch.stack([re_score, im_score], dim=0)
+        score = score.norm(dim=0)
 
+        score = self.gamma.item() - score.sum(dim=2)
+        return score
 
-        p_score = torch.stack([pos_re, pos_im], dim=0)
-        p_score = p_score.norm(dim=0)
-        p_score = self.gamma.item() - p_score.sum(dim=2)
+    def loss(self, positive_score, negative_score, subsampling_weight=torch.tensor([1])):
+        if self.config.negative_adversarial_sampling:
+            # In self-adversarial sampling, we do not apply back-propagation on the sampling weight
+            negative_score = (F.softmax(negative_score * self.config.adversarial_temperature, dim=1).detach()
+                              * F.logsigmoid(-negative_score)).sum(dim=1)
+        else:
+            negative_score = F.logsigmoid(-negative_score).mean(dim=1)
 
-        n_score = torch.stack([neg_re,neg_im], dim=0)
-        n_score = n_score.norm(dim=0)
-        n_score = self.gamma.item() - n_score.sum(dim=2)
-        return p_score, n_score
+        positive_score = F.logsigmoid(positive_score).squeeze(dim=1)
 
+        if self.config.uni_weight:
+            positive_sample_loss = - positive_score.mean()
+            negative_sample_loss = - negative_score.mean()
+        else:
+            positive_sample_loss = - (subsampling_weight * positive_score).sum()/subsampling_weight.sum()
+            negative_sample_loss = - (subsampling_weight * negative_score).sum()/subsampling_weight.sum()
 
-    def get_positive_score(self, score):
-        return score[0:self.config.batch_size]
+        loss = (positive_sample_loss + negative_sample_loss) / 2
+        if self.config.regularization != 0:
+            # Use L3 regularization for ComplEx and DistMult
+            normloss = self.config.regularization * (
+                self.ent_embeddings.weight.data.norm(p=3)**3 +
+                self.rel_embeddings.weight.data.norm(p=3).norm(p=3)**3
+            )
+            loss += normloss
 
-    def get_negative_score(self, score):
-        negative_score = score[self.config.batch_size:self.config.batch_seq_size]
-        return negative_score
+        return loss, positive_sample_loss, negative_sample_loss
 
-
-    def eval_model(self,input):
+    def eval_model(self,input, mode):
         batch_h, batch_r, batch_t = torch.chunk(input=input, chunks=3, dim=1)
         h = self.ent_embeddings(batch_h)
         t = self.ent_embeddings(batch_t)
@@ -110,9 +131,9 @@ class RotatE(nn.Module):
         score = self.gamma.item() - score.sum(dim=2)
 
         argsort = torch.argsort(score, dim=1, descending=True)
-        if self.mode == 'head-batch':
+        if mode == 'head-batch':
             positive_arg = batch_h
-        elif self.mode == 'tail-batch':
+        elif mode == 'tail-batch':
             positive_arg = batch_t
         else:
             raise ValueError('mode %s not supported' % self.mode)
