@@ -151,6 +151,7 @@ class TransE_config():
         self.margin = 1.0
         self.hidden_size = 100
         self.L = 2
+        self.regularization = 1.0
 
         self.entTotal = 0
         self.relTotal = 0
@@ -163,6 +164,7 @@ class TransD_config():
         self.margin = 1.0
         self.hidden_size = 50
         self.L = 2
+        self.regularization = 1.0
 
         self.entTotal = 0
         self.relTotal = 0
@@ -189,6 +191,7 @@ class TransA_config():
         self.margin = 2.0
         self.hidden_size = 100
         self.L = 2
+        self.regularization = 1.0
 
         self.entTotal = 0
         self.relTotal = 0
@@ -209,7 +212,7 @@ class RotatE_config():
     def __init__(self):
         self.negative_adversarial_sampling = True
         self.adversarial_temperature = 1.0
-        self.regularization = 0.3
+        self.regularization = 1.0
         self.uni_weight = True
         self.gamma = 12.0
         self.hidden_size = 256 # model will automatically double it

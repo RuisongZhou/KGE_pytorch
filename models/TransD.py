@@ -57,7 +57,7 @@ class TransD(nn.Module):
         score = self._calc(h, t, r)
         p_score = self.get_positive_score(score)
         n_score = self.get_negative_score(score)
-        normlosses = self.norm_loss(h,r,t,h_transfer,r_transfer,t_transfer)
+        normlosses = self.norm_loss(h,r,t,h_transfer,r_transfer,t_transfer) * self.regularization
         return self.loss(p_score, n_score) + normlosses
 
     def get_positive_score(self, score):

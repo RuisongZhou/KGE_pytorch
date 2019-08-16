@@ -40,7 +40,7 @@ class TransE(nn.Module):
         score = self._calc(h, t, r)
         p_score = self.get_positive_score(score)
         n_score = self.get_negative_score(score)
-        normloss = self.norm_loss(h,r,t)
+        normloss = self.norm_loss(h,r,t) * self.regularization
         return self.score_loss(p_score, n_score) + normloss
 
     def predict(self, input):
