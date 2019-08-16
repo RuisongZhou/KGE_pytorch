@@ -17,35 +17,44 @@ class TrainBase():
         self.args = args
         self.sumwriter = SummaryWriter(log_dir=args.summarydir)
 
-    def load_data(self, mode='train'):
-        if mode == 'train':
-            dataset = EmDataSet(self.args.trainpath)
-            dataset.generate_neg_samples()
-            dataloader = DataLoader(dataset,
-                                    batch_size=self.args.batch_size,
-                                    shuffle=self.args.shuffle,
-                                    num_workers=self.args.numworkers,
-                                    drop_last=self.args.drop_last)
-            return dataloader
-        elif mode == 'test':
-            dataset = EmDataSet(self.args.testpath, mode='test')
-        elif mode == 'valid':
-            dataset = EmDataSet(self.args.validpath, mode='eval')
-        dataloader = DataLoader(dataset,
-                                batch_size=self.args.eval_batch_size,
-                                shuffle=False,
-                                num_workers=self.args.evalnumberworkers,
-                                drop_last=False)
+    def get_iterator(self):
+        train_iterator = DataLoader(
+            UniformDataSet(self.args.trainpath),
+            batch_size=self.args.batch_size,
+            shuffle=self.args.shuffle,
+            num_workers=self.args.numworkers,
+            drop_last=self.args.drop_last
+        )
+        test_iterator = DataLoader(
+            TestDataset(self.args.testpath),
+            batch_size=self.args.eval_batch_size,
+            shuffle=False,
+            num_workers=self.args.evalnumberworkers,
+            drop_last=False
+        )
+        valid_iterator = DataLoader(
+            TestDataset(self.args.validpath),
+            batch_size=self.args.eval_batch_size,
+            shuffle=False,
+            num_workers=self.args.evalnumberworkers,
+            drop_last=False
+        )
 
-        return dataloader
+        return train_iterator, test_iterator, valid_iterator
 
-    def load_model(self):
-        pass
+    def load_model(self, model, optimizer):
+        print('Loading checkpoint %s...' % self.args.init_checkpoint)
+        checkpoint = torch.load(self.args.init_checkpoint)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        current_learning_rate = checkpoint['lr']
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
-    def save_model(self, mr, hit10, model):
-        name = self.args.model
-        path = os.path.join(self.args.modelpath, "%s_mr_%d__hit10_%f.model" % (name, mr, hit10))
-        torch.save(model, path)
+    def save_model(self, model, optimizer, variable_list):
+        torch.save({
+            **variable_list,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict()
+        }, path)
 
     def load_opt(self, model):
         lr = self.args.learningrate
@@ -61,39 +70,33 @@ class TrainBase():
         else:
             print("ERROR : Optimizer %s is not supported." % OPTIMIZER)
             print("Support optimizer:\n===>Adam\n===>SGD\n===>Adagrad\n===>Adadelta")
-            exit(1)
+            raise EnvironmentError
         return optimizer
 
-    def fit(self, model):
+    def fit(self, model, optimizer=None):
         epochs = self.args.epochs
         lr = self.args.learningrate
-        optimizer = self.load_opt(model)
-
+        if not optimizer:
+            optimizer = self.load_opt(model)
         if self.args.usegpu:
             model.cuda()
+
         globalstep = 0
         globalepoch = 0
         minLoss = float("inf")
 
-        dataloader = self.load_data()
-        evaldataloader = self.load_data(mode='valid')
+        train_iterator, test_iterator, valid_iterator = self.get_iterator()
 
         for epoch in range(epochs):
             globalepoch += 1
             print("=" * 20 + "EPOCHS(%d/%d)" % (globalepoch, epochs) + "=" * 20)
             step = 0
             model.train()
-            for posData, negData in dataloader:
-
-                # Normalize the embedding if neccessary
-                model.normalizeEmbedding()
+            for posData, negData in train_iterator:
 
                 if self.args.usegpu:
-                    posData = Variable(torch.LongTensor(posData).cuda())
-                    negData = Variable(torch.LongTensor(negData).cuda())
-                else:
-                    posData = Variable(torch.LongTensor(posData))
-                    negData = Variable(torch.LongTensor(negData))
+                    posData = posData.cuda()
+                    negData = negData.cuda()
 
                 # Calculate the loss from the modellrdecayepoch
                 data_batch = torch.cat((posData, negData), 0)
@@ -117,8 +120,8 @@ class TrainBase():
                         epoch + 1, epochs, step, lossVal, minLoss))
                 step += 1
                 globalstep += 1
-                self.sumwriter.add_scalar('train/loss', lossVal, global_step=globalstep)
-                self.sumwriter.add_scalar('train/lr', lr, global_step=globalstep)
+                self.sumwriter.add_scalar(self.args.model + '/train/loss', lossVal, global_step=globalstep)
+                self.sumwriter.add_scalar(self.args.model + 'train/lr', lr, global_step=globalstep)
 
             if globalepoch % self.args.lrdecayepoch == 0:
                 adjust_learning_rate(optimizer, decay=self.args.lrdecay)
@@ -131,23 +134,55 @@ class TrainBase():
                 hit10 = 0
                 mr = 0
                 evalstep = 0
-                for data in evaldataloader:
+                for data in test_iterator:
                     evalstep += 1
                     if self.args.usegpu:
-                        data = Variable(torch.LongTensor(data).cuda())
-                    else:
-                        data = Variable(torch.LongTensor(data))
+                        data = data.cuda()
 
                     rankH, rankT = model.eval_model(data)
                     if evalstep % 1000 == 0:
                         print("[TEST-EPOCH(%d/%d)-STEP(%d)]mr:%f, hit@10:%f" % (
-                        globalepoch, epochs, evalstep, mr/evalstep, hit10/evalstep))
+                            globalepoch, epochs, evalstep, mr / evalstep, hit10 / evalstep))
                     mr += (rankH + rankT) / 2
                     if rankT <= 10:
                         hit10 += 1
 
                 mr /= evalstep
                 hit10 /= evalstep
-                self.sumwriter.add_scalar('eval/hit@10', hit10, global_step=epoch + 1)
-                self.sumwriter.add_scalar('eval/MR', mr, global_step=epoch + 1)
-                self.save_model(mr, hit10, model)
+                self.sumwriter.add_scalar(self.args.model + 'eval/hit@10', hit10, global_step=epoch + 1)
+                self.sumwriter.add_scalar(self.args.model + 'eval/MR', mr, global_step=epoch + 1)
+                variable_list = {
+                    'step': globalstep,
+                    'lr': lr,
+                    'MR': mr,
+                    'hit@10': hit10
+                }
+                self.save_model(model, optimizer, variable_list)
+
+        print("=" * 20 + "FINISH TRAINING" + "=" * 20)
+        self.valid(model, valid_iterator)
+
+    def valid(self, model, iter):
+        print('begin eval the model')
+        model.eval()
+        hit10 = 0
+        mr = 0
+        evalstep = 0
+        for data in iter:
+            evalstep += 1
+            if self.args.usegpu:
+                data = data.cuda()
+
+            rankH, rankT = model.eval_model(data)
+            if evalstep % 1000 == 0:
+                print("[VALID-STEP(%d)]mr:%f, hit@10:%f" % (
+                    evalstep, mr / evalstep, hit10 / evalstep))
+            mr += (rankH + rankT) / 2
+            if rankT <= 10:
+                hit10 += 1
+
+        mr /= evalstep
+        hit10 /= evalstep
+        print("=" * 20 + "VALID RESULTS" + "=" * 20)
+        print('Mean Rank: %f' % mr)
+        print('Hit@10: %d' % hit10)

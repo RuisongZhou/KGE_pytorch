@@ -25,7 +25,7 @@ class TransE(nn.Module):
         t = torch.squeeze(t, dim=1)
         return self.distfn(h + r, t)
 
-    def loss(self, p_score, n_score):
+    def score_loss(self, p_score, n_score):
         if self.config.usegpu:
             y = Variable(torch.Tensor([self.config.margin]).cuda())
         else:
@@ -40,7 +40,8 @@ class TransE(nn.Module):
         score = self._calc(h, t, r)
         p_score = self.get_positive_score(score)
         n_score = self.get_negative_score(score)
-        return self.loss(p_score, n_score)
+        normloss = self.norm_loss(h,r,t)
+        return self.score_loss(p_score, n_score) + normloss
 
     def predict(self, input):
         batch_h, batch_r, batch_t = torch.chunk(input=input, chunks=3, dim=1)
@@ -105,13 +106,8 @@ class TransE(nn.Module):
 
         return rankH + 1, rankT + 1
 
-    def normalizeEmbedding(self):
-        self.ent_embeddings.weight.data.copy_(torch.renorm(input=self.ent_embeddings.weight.detach().cpu(),
-                                                           p=2,
-                                                           dim=0,
-                                                           maxnorm=1.0))
-        self.rel_embeddings.weight.data.copy_(torch.renorm(input=self.rel_embeddings.weight.detach().cpu(),
-                                                           p=2,
-                                                           dim=0,
-                                                           maxnorm=1.0))
+    def norm_loss(self,h,r,t):
+        loss = h.norm(self.config.L) + r.norm(self.config.L) + t.norm(self.config.L)
+        return loss
+
 

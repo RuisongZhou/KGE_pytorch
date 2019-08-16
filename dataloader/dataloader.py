@@ -11,30 +11,35 @@ import Config
 import math
 
 
-class EmDataSet(Dataset):
-    def __init__(self, datapath, mode='train'):
+class UniformDataSet(Dataset):
+    '''
+    the negative samples are subject to uniform distribution
+    '''
+    def __init__(self, datapath, rephead=0.5, reptail=0.5):
         super(Dataset, self).__init__()
         self.dataPath = datapath
-        self.mode = mode
         print("[INFO] Load knowledge graph embedding data")
         self.data = pd.read_csv(datapath,
                                 sep='\t',
-                                names=["head", "relation", "tail"],
+                                names=["head", "tail", "relation"],
                                 header=None,
                                 )
+        order = ['head', 'relation', 'tail']
+        self.data = self.data[order]
+        self.generate_neg_samples(rephead=rephead, reptail=reptail)
+        self.data = np.array(self.data)
+        self.negData = np.array(self.negData)
         print("[INFO] Finish load knowledge graph embedding data")
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, item):
-        if hasattr(self, 'negData') and self.mode == 'train':
-            return np.array(self.data.iloc[item, :3]), np.array(self.negData.iloc[item, :3])
-        else:
-            return np.array(self.data.iloc[item, :3])
+        return self.data[item], self.negData[item]
+
 
     # [TODO] Use KBGAN
-    def generate_neg_samples(self, rephead=0.5, reptail=0.5):
+    def generate_neg_samples(self, rephead, reptail):
         '''
         Use to generate negative sample for training
         @param
@@ -81,9 +86,9 @@ class EmDataSet(Dataset):
             map(replaceTail, self.negData["tail"], shuffleHead, shuffleTail, repProbaDistribution, exProbaDistribution))
 
 
-class adversarialDataset(Dataset):
+class AdversarialDataset(Dataset):
     def __init__(self, datapath, ent_num, mode='tail-batch'):
-        super(adversarialDataset, self).__init__()
+        super(Dataset, self).__init__()
         self.dataPath = datapath
         self.ent_num = ent_num
         self.mode = mode
@@ -148,10 +153,9 @@ class adversarialDataset(Dataset):
         tirples = []
         with open(self.dataPath) as f:
             for line in f:
-                sample = line.strip().split('\t')
-                tirples.append(sample)
+                h,t,r = line.strip().split('\t')
+                tirples.append([h,r,t])
             tirples = [tuple(map(int, i)) for i in tirples]
-
         return tirples
 
     @staticmethod
@@ -207,9 +211,9 @@ class adversarialDataset(Dataset):
         return true_head, true_tail
 
 
-class adversarialTestDataset(Dataset):
+class TestDataset(Dataset):
     def __init__(self, datapath, mode='tail-batch'):
-        super(adversarialTestDataset, self).__init__()
+        super(TestDataset, self).__init__()
         self.dataPath = datapath
         self.mode = mode
         print("[INFO] Load knowledge graph embedding data")
@@ -226,9 +230,11 @@ class adversarialTestDataset(Dataset):
     def get_data(self):
         triples = pd.read_csv(self.dataPath,
                               sep='\t',
-                              names=["head", "relation", "tail"],
+                              names=["head", "tail", "relation"],
                               header=None,
                               )
+        order = ['head', 'relation', 'tail']
+        triples = triples[order]
         return np.array(triples)
 
 
@@ -260,7 +266,7 @@ class BidirectionalOneShotIterator(object):
 
 
 if __name__ == '__main__':
-    path = './preprocess/embedding_train2id.txt'
+    path = './data/FB15k/train2id.txt'
     # dataset = EmDataSet(path)
     # dataloader = DataLoader(dataset,
     #                         batch_size=32,
@@ -273,7 +279,7 @@ if __name__ == '__main__':
     #     break
     config = Config.Config()
     config.init()
-    dataset = adversarialDataset(path, config.modelparam.entTotal)
+    dataset = AdversarialDataset(path, config.modelparam.entTotal)
     dataloader = DataLoader(dataset, batch_size=10, num_workers=8)
     print("Finish make dataloader")
     # print(len(dataloader))
@@ -284,8 +290,8 @@ if __name__ == '__main__':
     #     print(each[3])
     #     break
 
-    dataloader2 = DataLoader(adversarialDataset(path, config.modelparam.entTotal, mode='head-batch'),
+    dataloader2 = DataLoader(AdversarialDataset(path, config.modelparam.entTotal, mode='head-batch'),
                              batch_size=10, num_workers=8)
 
     train_iterator = BidirectionalOneShotIterator(dataloader, dataloader2)
-    pos_sample, neg_sample, subsampling_weight, mode = next(train_iterator)
+    print(next(train_iterator))

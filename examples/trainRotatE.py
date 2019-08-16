@@ -32,23 +32,23 @@ class RotatEModel(TrainBase):
 
     def get_iterator(self):
         train_dataloader_head = DataLoader(
-            adversarialDataset(self.args.trainpath, self.args.modelparam.entTotal, 'head-batch'),
+            AdversarialDataset(self.args.trainpath, self.args.modelparam.entTotal, 'head-batch'),
             batch_size=self.args.batch_size,
             shuffle=self.args.shuffle,
             num_workers=self.args.numworkers,
             drop_last=self.args.drop_last,
-            collate_fn=adversarialDataset.collate_fn)
+            collate_fn=AdversarialDataset.collate_fn)
 
         train_dataloader_tail = DataLoader(
-            adversarialDataset(self.args.trainpath, self.args.modelparam.entTotal, 'tail-batch'),
+            AdversarialDataset(self.args.trainpath, self.args.modelparam.entTotal, 'tail-batch'),
             batch_size=self.args.batch_size,
             shuffle=self.args.shuffle,
             num_workers=self.args.numworkers,
             drop_last=self.args.drop_last,
-            collate_fn=adversarialDataset.collate_fn)
+            collate_fn=AdversarialDataset.collate_fn)
 
         test_dataloader = DataLoader(
-            adversarialTestDataset(self.args.testpath),
+            TestDataset(self.args.testpath),
             batch_size=self.args.eval_batch_size,
             num_workers=self.args.evalnumberworkers,
             shuffle=False,

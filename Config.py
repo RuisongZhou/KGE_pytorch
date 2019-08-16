@@ -10,19 +10,21 @@ from utils.util import CheckPath
 
 class Config():
     def __init__(self):
+
         # set path and savetype
-        self.rootpath = './preprocess/'
-        self.trainpath = self.rootpath + "emb/emtrain2id.txt"
-        self.testpath = self.rootpath + 'emb/emtest2id.txt'
-        self.validpath = self.rootpath + "emb/emvalid2id.txt"
-        self.entitypath = self.rootpath + 'emb/entity2id.txt'
-        self.relationpath = self.rootpath + 'emb/relation2id.txt'
+        self.dataset = 'FB15k'
+        self.rootpath = './data/' + self.dataset
+        self.trainpath = self.rootpath + "/train2id.txt"
+        self.testpath = self.rootpath + '/test2id.txt'
+        self.validpath = self.rootpath + "/valid2id.txt"
+        self.entitypath = self.rootpath + '/entity2id.txt'
+        self.relationpath = self.rootpath + '/relation2id.txt'
 
         # Other arguments
-        self.embedpath = "./embedding/source/embed/"
-        self.logpath = "./embedding/source/log/"
-        self.modelpath = "./embedding/source/model/"
-        self.summarydir = "./embedding/source/summary/"
+        self.embedpath = "./source/embed/"
+        self.logpath = "./source/log/"
+        self.modelpath = "./source/model/"
+        self.summarydir = "./source/summary/"
 
         # DataLoader arguments
         self.batch_size = 1024
@@ -42,14 +44,15 @@ class Config():
         self.optimizer = 'Adam'
         self.weight_decay = 0
         self.drop_last = True
-        self.loadmod = False
 
         # load pre-trained model/emb
-        self.premodel = None
-        self.entityfile = "./embedding/source/embed/entityEmbedding.txt"
-        self.relationfile = "./embedding/source/embed/relationEmbedding.txt"
+        self.init_checkpoint = None
+        self.entityfile = "./source/embed/entityEmbedding.txt"
+        self.relationfile = "./source/embed/relationEmbedding.txt"
         self.loadembed = False
 
+        #save path
+        self.savepath = self.modelpath + self.model
         # Check Path
         self.check()
 
@@ -88,6 +91,7 @@ class Config():
         CheckPath(self.summarydir, raise_error=False)
         CheckPath(self.logpath, raise_error=False)
         CheckPath(self.embedpath, raise_error=False)
+        CheckPath(self.savepath, raise_error=False)
 
     def set_model_arg(self, lr=0.01, lrdecay=0.96, lrdecayepoch=5, epoch=5, hidden_size=100, margin=1, shuffle=True,
                       optimizer='Adam'):
