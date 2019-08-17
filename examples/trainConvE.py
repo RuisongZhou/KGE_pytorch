@@ -39,7 +39,7 @@ class ConvEModel(TrainBase):
             step = 0
             model.train()
             for posData, _ in train_iterator:
-
+                posData = posData.reshape(-1,3)
                 if self.args.usegpu:
                     posData = posData.cuda()
                     # negData = Variable(torch.LongTensor(negData).cuda())

@@ -20,7 +20,7 @@ class TrainBase():
 
     def get_iterator(self):
         train_iterator = DataLoader(
-            UniformDataSet(self.args.trainpath),
+            UniformDataSet(self.args.trainpath, self.args.neg_sample_rate),
             batch_size=self.args.batch_size,
             shuffle=self.args.shuffle,
             num_workers=self.args.numworkers,
@@ -103,7 +103,8 @@ class TrainBase():
             step = 0
             model.train()
             for posData, negData in train_iterator:
-
+                posData = posData.reshape(-1,3)
+                negData = negData.reshape(-1,3)
                 if self.args.usegpu:
                     posData = posData.cuda()
                     negData = negData.cuda()

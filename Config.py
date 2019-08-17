@@ -31,6 +31,7 @@ class Config():
         self.eval_batch_size = 1
         self.numworkers = 6
         self.evalnumberworkers = multiprocessing.cpu_count()
+        self.neg_sample_rate = 1
 
         # Model arguments
         self.model = 'TransD'
@@ -76,7 +77,7 @@ class Config():
 
         self.modelparam.entTotal = len(pd.read_csv(self.entitypath, sep='\t', header=None))
         self.modelparam.relTotal = len(pd.read_csv(self.relationpath, sep='\t', header=None))
-        self.modelparam.batch_size = self.batch_size
+        self.modelparam.batch_size = self.batch_size * self.neg_sample_rate
         self.modelparam.batch_seq_size = int(self.batch_size * 2)
         self.modelparam.usegpu = self.usegpu
 

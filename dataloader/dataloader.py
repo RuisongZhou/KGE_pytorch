@@ -16,7 +16,7 @@ class UniformDataSet(Dataset):
     the negative samples are subject to uniform distribution
     '''
 
-    def __init__(self, datapath, rephead=0.5, reptail=0.5):
+    def __init__(self, datapath, neg_sample_rate=1, rephead=0.5, reptail=0.5):
         super(Dataset, self).__init__()
         self.dataPath = datapath
         print("[INFO] Load knowledge graph embedding data")
@@ -27,19 +27,17 @@ class UniformDataSet(Dataset):
                                 )
         order = ['head', 'relation', 'tail']
         self.data = self.data[order]
-        self.generate_neg_samples(rephead=rephead, reptail=reptail)
-        self.data = np.array(self.data)
-        self.negData = np.array(self.negData)
+        self.generate_neg_samples(rephead=rephead, reptail=reptail, neg_sample_rate=neg_sample_rate)
         print("[INFO] Finish load knowledge graph embedding data")
 
     def __len__(self):
-        return len(self.data)
+        return len(self.posData)
 
     def __getitem__(self, item):
-        return self.data[item], self.negData[item]
+        return self.posData[item], self.negData[item]
 
     # [TODO] Use KBGAN
-    def generate_neg_samples(self, rephead, reptail):
+    def generate_neg_samples(self, rephead, reptail, neg_sample_rate=1):
         '''
         Use to generate negative sample for training
         @param
@@ -84,7 +82,36 @@ class UniformDataSet(Dataset):
             map(replaceHead, self.negData["head"], shuffleHead, shuffleTail, repProbaDistribution, exProbaDistribution))
         self.negData["tail"] = list(
             map(replaceTail, self.negData["tail"], shuffleHead, shuffleTail, repProbaDistribution, exProbaDistribution))
+        self.negData = np.array(self.negData)
+        self.negData = self.negData[:,np.newaxis,:]
+        self.posData = self.data.copy()
+        self.posData = np.array(self.posData)
+        self.posData = self.posData[:,np.newaxis,:]
 
+        if neg_sample_rate > 1:
+            self.pos_new_data = self.posData.copy()
+            for i in range(neg_sample_rate-1):
+                np.random.seed(i+1)
+                self.exData = self.data.copy()
+                repProbaDistribution = np.random.uniform(low=0.0, high=1.0, size=(len(self.exData),))
+                exProbaDistribution = np.random.uniform(low=0.0, high=1.0, size=(len(self.exData),))
+                shuffleHead = self.exData["head"].sample(frac=1.0, random_state=0)
+                shuffleTail = self.exData["tail"].sample(frac=1.0, random_state=0)
+                self.exData["head"] = list(
+                    map(replaceHead, self.exData["head"], shuffleHead, shuffleTail, repProbaDistribution,
+                        exProbaDistribution))
+                self.exData["tail"] = list(
+                    map(replaceTail, self.exData["tail"], shuffleHead, shuffleTail, repProbaDistribution,
+                        exProbaDistribution))
+
+                self.exData = np.array(self.exData)
+                self.exData = self.exData[:,np.newaxis,:]
+                self.negData = np.concatenate((self.negData, self.exData),axis=1)
+                self.posData = np.concatenate((self.posData, self.pos_new_data), axis=1)
+                del self.exData
+
+            del self.pos_new_data
+        del self.data
 
 class AdversarialDataset(Dataset):
     '''
