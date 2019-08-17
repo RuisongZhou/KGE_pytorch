@@ -5,6 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from tensorboardX import SummaryWriter
 from dataloader.dataloader import *
 from torch.utils.data import DataLoader
+import json
 
 
 def adjust_learning_rate(optimizer, decay):
@@ -55,19 +56,15 @@ class TrainBase():
             **variable_list,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict()
-        },os.path.join(self.args.savepath, 'checkpoint'))
+        }, os.path.join(self.args.savepath, 'checkpoint'))
 
-        ent_embeddings = model.ent_embeddings.weight.detach().cpu().numpy()
-        np.save(
-            os.path.join(self.args.savepath, 'ent_embeddings'),
-            ent_embeddings
-        )
-
-        rel_embeddings = model.rel_embeddings.weight.detach().cpu().numpy()
-        np.save(
-            os.path.join(self.args.savepath, 'rel_embeddings'),
-            rel_embeddings
-        )
+    #【TODO】could be save with timestamp
+    def save_model_param(self, model):
+        param = model.getWeight()
+        filename = os.path.join(self.args.savepath, 'checkpoint')
+        with open(filename + '.json', 'a') as outfile:
+            json.dump(param, outfile, ensure_ascii=False)
+            outfile.write('\n')
 
     def load_opt(self, model):
         lr = self.args.learningrate

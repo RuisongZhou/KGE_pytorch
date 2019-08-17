@@ -94,3 +94,8 @@ class TransA(nn.Module):
         rankH = torch.nonzero(nn.functional.relu(score - targetloss)).size()[0]
 
         return rankH + 1, rankT + 1
+
+    def getWeights(self):
+        return {"entityEmbed": self.ent_embeddings.weight.detach().cpu().numpy(),
+                "relationEmbed": self.rel_embeddings.weight.detach().cpu().numpy(),
+                "Wr": self.Wr.cpu().numpy()}

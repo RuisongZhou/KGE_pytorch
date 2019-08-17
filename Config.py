@@ -68,6 +68,8 @@ class Config():
             self.modelparam = ConvE_config()
         elif self.model == 'RotatE':
             self.modelparam = RotatE_config()
+        elif self.model == 'SimplE':
+            self.modelparam = SimplE_config()
         else:
             print("error model name %s" %self.model)
             exit(1)
@@ -219,5 +221,11 @@ class RotatE_config():
         self.uni_weight = True
         self.gamma = 12.0
         self.hidden_size = 256 # model will automatically double it
+
+class SimplE_config():
+    def __init__(self):
+        self.regularization =0.3
+        self.L = 2
+        self.hidden_size = 200
 
 

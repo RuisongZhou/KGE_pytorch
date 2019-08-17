@@ -102,7 +102,7 @@ class TransD(nn.Module):
 
         return rankH + 1, rankT + 1
 
-    def retEvalWeights(self):
+    def getWeights(self):
         return {"entityEmbed": self.ent_embeddings.weight.detach().cpu().numpy(),
                 "relationEmbed": self.rel_embeddings.weight.detach().cpu().numpy(),
                 "entityTransfer": self.ent_transfer.weight.detach().cpu().numpy(),

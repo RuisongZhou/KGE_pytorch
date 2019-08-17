@@ -76,7 +76,7 @@ class TransE(nn.Module):
                 embed = np.array(embed.split(","), dtype=float)
                 self.rel_embeddings.weight.data[rel].copy_(torch.from_numpy(embed))
 
-    def retEvalWeights(self):
+    def getWeights(self):
         return {"entityEmbed": self.ent_embeddings.weight.detach().cpu().numpy(),
                 "relationEmbed": self.rel_embeddings.weight.detach().cpu().numpy()}
 

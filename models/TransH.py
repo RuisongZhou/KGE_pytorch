@@ -96,7 +96,7 @@ class TransH(nn.Module):
 
         return rankH + 1, rankT + 1
 
-    def retEvalWeights(self):
+    def getWeights(self):
         return {"entityEmbed": self.ent_embeddings.weight.detach().cpu().numpy(),
                 "relationEmbed": self.rel_embeddings.weight.detach().cpu().numpy(),
                 "norm_vector": self.norm_vector.weight.detach().cpu().numpy()}

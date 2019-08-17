@@ -108,3 +108,8 @@ class ConvE(nn.Module):
         hit1 /= len(batch_t)
 
         return rank, hit10, hit1
+
+    def getWeight(self):
+        return {"entityEmbed": self.ent_embeddings.weight.detach().cpu().numpy(),
+                "relationEmbed": self.rel_embeddings.weight.detach().cpu().numpy()}
+

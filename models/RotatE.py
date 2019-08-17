@@ -159,3 +159,7 @@ class RotatE(nn.Module):
         hit10 /= len(h)
 
         return ranks, hit1, hit10
+
+    def getWeights(self):
+        return {"entityEmbed": self.ent_embeddings.weight.detach().cpu().numpy(),
+                "relationEmbed": self.rel_embeddings.weight.detach().cpu().numpy()}
