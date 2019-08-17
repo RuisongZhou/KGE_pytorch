@@ -137,9 +137,9 @@ class RotatEModel(TrainBase):
                     hit10_ /= evalstep
                     hit1_ /= evalstep
                     title = 'RotatE/test/' + mode
-                    self.sumwriter.add_scalar('RotatE/test/hit@10', hit10_, global_step=epoch + 1)
-                    self.sumwriter.add_scalar('RotatE/test/hit@1', hit1_, global_step=epoch + 1)
-                    self.sumwriter.add_scalar('RotatE/test/MR', mr, global_step=epoch + 1)
+                    self.sumwriter.add_scalar(title+'/hit@10', hit10_, global_step=epoch + 1)
+                    self.sumwriter.add_scalar(title+'/hit@1', hit1_, global_step=epoch + 1)
+                    self.sumwriter.add_scalar(title+'/MR', mr, global_step=epoch + 1)
                 variable_list = {
                     'step': globalstep,
                     'lr': lr,
