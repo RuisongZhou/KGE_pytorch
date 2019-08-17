@@ -14,7 +14,7 @@ Models:
  - [ ] TransA
  - [x] ConvE
  - [x] SimplE
- - [ ] RotatE
+ - [x] RotatE
  
  **Usage**
  1. Download datasets and put it in `./data` directory.
@@ -27,7 +27,6 @@ Models:
  
  **Info**
  * TransA model has a question about memory explosion
- * I have not test RotatE model
  
  **Links**
  
