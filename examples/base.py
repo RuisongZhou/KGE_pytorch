@@ -50,11 +50,24 @@ class TrainBase():
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
     def save_model(self, model, optimizer, variable_list):
+
         torch.save({
             **variable_list,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict()
-        }, path)
+        },os.path.join(self.args.savepath, 'checkpoint'))
+
+        ent_embeddings = model.ent_embeddings.weight.detach().cpu().numpy()
+        np.save(
+            os.path.join(self.args.savepath, 'ent_embeddings'),
+            ent_embeddings
+        )
+
+        rel_embeddings = model.rel_embeddings.weight.detach().cpu().numpy()
+        np.save(
+            os.path.join(self.args.savepath, 'rel_embeddings'),
+            rel_embeddings
+        )
 
     def load_opt(self, model):
         lr = self.args.learningrate
@@ -140,7 +153,7 @@ class TrainBase():
                         data = data.cuda()
 
                     rankH, rankT = model.eval_model(data)
-                    if evalstep % 1000 == 0:
+                    if evalstep % 5000 == 0:
                         print("[TEST-EPOCH(%d/%d)-STEP(%d)]mr:%f, hit@10:%f" % (
                             globalepoch, epochs, evalstep, mr / evalstep, hit10 / evalstep))
                     mr += (rankH + rankT) / 2

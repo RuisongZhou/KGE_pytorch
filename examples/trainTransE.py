@@ -24,6 +24,7 @@ class TransEModel(TrainBase):
 if __name__ == '__main__':
     config = Config.Config()
     config.model = 'TransE'
+    config.learningrate = 0.01
     config.init()
     util.printArgs(config)
     util.printArgs(config.modelparam)

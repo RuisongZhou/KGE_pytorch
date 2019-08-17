@@ -20,9 +20,9 @@ class TransA(nn.Module):
 
     def init_Wr(self):
         if self.config.usegpu:
-            self.Wr = torch.zeros((self.config.relTotal, self.config.hidden_size, self.config.hidden_size)).cuda()
+            self.Wr = torch.zeros((self.config.relTotal, self.config.hidden_size, self.config.hidden_size),requires_grad=False).cuda()
         else:
-            self.Wr = torch.zeros((self.config.relTotal, self.config.hidden_size, self.config.hidden_size))
+            self.Wr = torch.zeros((self.config.relTotal, self.config.hidden_size, self.config.hidden_size),requires_grad=False)
 
     def _calc_Wr(self, h, r, t):
         '''
@@ -63,7 +63,7 @@ class TransA(nn.Module):
         p_score, n_score = self._calc_(h, r, t, relWr)
 
         marginLoss = torch.sum(F.relu(input=p_score - n_score + self.config.margin)) / self.config.batch_size
-        Wrloss = torch.norm(self.Wr, p=self.config.L) * self.config.lamb
+        Wrloss = torch.norm(relWr, p=self.config.L) * self.config.lamb
         normloss = self.norm_loss(h, r, t) * self.config.regularization
         return marginLoss + Wrloss + normloss
 
@@ -83,4 +83,14 @@ class TransA(nn.Module):
 
         # predict tail
         error = torch.abs(h + r - self.ent_embeddings.weight.data)
-        score = torch.matmul(torch.matmul(error, relWr), error.transpose(1, 2))
+        score = torch.matmul(torch.matmul(error, relWr), error.transpose(1, 2)).squeeze(1)
+        right = torch.abs(h+r-t)
+        targetloss = torch.matmul(torch.matmul(right, relWr), error.transpose(1, 2)).squeeze(1)
+        rankT = torch.nonzero(nn.functional.relu(score - targetloss)).size()[0]
+
+        #predict head
+        error = torch.abs(self.ent_embeddings.weight.data + r -t )
+        score = torch.matmul(torch.matmul(error, relWr), error.transpose(1, 2)).squeeze(1)
+        rankH = torch.nonzero(nn.functional.relu(score - targetloss)).size()[0]
+
+        return rankH + 1, rankT + 1

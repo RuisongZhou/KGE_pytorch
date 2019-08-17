@@ -25,6 +25,9 @@ Models:
  If you want to modify parameters or datasets. You can rewrite training files and overwrite raw parameters. The parameters at `Config.py`
  come from their paper.
  
+ **Info**
+ * TransA model has a question about memory explosion
+ 
  **Links**
  
  Datasets:

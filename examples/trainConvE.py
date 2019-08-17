@@ -84,7 +84,7 @@ class ConvEModel(TrainBase):
                         data = data.cuda()
 
                     rank, hit10, hit1 = model.eval_model(data)
-                    if evalstep % 1000 == 0:
+                    if evalstep % 10 == 0:
                         print("[TEST-EPOCH(%d/%d)-STEP(%d)]mr:%f, hit@10:%f" % (
                             globalepoch, epochs, evalstep, rank, hit10))
 

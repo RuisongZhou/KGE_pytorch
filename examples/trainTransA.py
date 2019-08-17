@@ -25,6 +25,7 @@ if __name__ == '__main__':
     config = Config.Config()
     config.model = 'TransA'
     config.learningrate = 0.002
+    config.batch_size = 32
     config.init()
     util.printArgs(config)
     util.printArgs(config.modelparam)

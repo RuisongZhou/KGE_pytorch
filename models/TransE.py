@@ -40,7 +40,7 @@ class TransE(nn.Module):
         score = self._calc(h, t, r)
         p_score = self.get_positive_score(score)
         n_score = self.get_negative_score(score)
-        normloss = self.norm_loss(h,r,t) * self.regularization
+        normloss = self.norm_loss() * self.config.regularization
         return self.score_loss(p_score, n_score) + normloss
 
     def predict(self, input):
@@ -106,8 +106,7 @@ class TransE(nn.Module):
 
         return rankH + 1, rankT + 1
 
-    def norm_loss(self,h,r,t):
-        loss = h.norm(self.config.L) + r.norm(self.config.L) + t.norm(self.config.L)
+    def norm_loss(self):
+        loss = torch.norm(self.ent_embeddings.weight.data, p=self.config.L) / self.config.entTotal + torch.norm(
+            self.rel_embeddings.weight.data, p=self.config.L) / self.config.relTotal
         return loss
-
-

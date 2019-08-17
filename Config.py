@@ -29,7 +29,7 @@ class Config():
         # DataLoader arguments
         self.batch_size = 1024
         self.eval_batch_size = 1
-        self.numworkers = 3
+        self.numworkers = 6
         self.evalnumberworkers = multiprocessing.cpu_count()
 
         # Model arguments
@@ -51,8 +51,6 @@ class Config():
         self.relationfile = "./source/embed/relationEmbedding.txt"
         self.loadembed = False
 
-        #save path
-        self.savepath = self.modelpath + self.model
         # Check Path
         self.check()
 
@@ -80,6 +78,9 @@ class Config():
         self.modelparam.batch_seq_size = int(self.batch_size * 2)
         self.modelparam.usegpu = self.usegpu
 
+        # save path
+        self.savepath = self.modelpath + self.model
+        CheckPath(self.savepath, raise_error=False)
     def check(self):
         # Check files
         CheckPath(self.trainpath)
@@ -91,7 +92,8 @@ class Config():
         CheckPath(self.summarydir, raise_error=False)
         CheckPath(self.logpath, raise_error=False)
         CheckPath(self.embedpath, raise_error=False)
-        CheckPath(self.savepath, raise_error=False)
+
+
 
     def set_model_arg(self, lr=0.01, lrdecay=0.96, lrdecayepoch=5, epoch=5, hidden_size=100, margin=1, shuffle=True,
                       optimizer='Adam'):
@@ -148,10 +150,10 @@ class Config():
 
 class TransE_config():
     def __init__(self):
-        self.margin = 1.0
+        self.margin = 2.0
         self.hidden_size = 100
         self.L = 2
-        self.regularization = 1.0
+        self.regularization = 0.5
 
         self.entTotal = 0
         self.relTotal = 0
@@ -164,7 +166,7 @@ class TransD_config():
         self.margin = 1.0
         self.hidden_size = 50
         self.L = 2
-        self.regularization = 1.0
+        self.regularization = 0.25
 
         self.entTotal = 0
         self.relTotal = 0
@@ -196,7 +198,7 @@ class TransA_config():
 
         self.entTotal = 0
         self.relTotal = 0
-        self.batch_size = 4800
+        self.batch_size = 1024
         self.batch_seq_size = int(self.batch_size * 2)
 
 class ConvE_config():
