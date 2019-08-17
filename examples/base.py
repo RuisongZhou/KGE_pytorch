@@ -131,7 +131,7 @@ class TrainBase():
                 step += 1
                 globalstep += 1
                 self.sumwriter.add_scalar(self.args.model + '/train/loss', lossVal, global_step=globalstep)
-                self.sumwriter.add_scalar(self.args.model + 'train/lr', lr, global_step=globalstep)
+                self.sumwriter.add_scalar(self.args.model + '/train/lr', lr, global_step=globalstep)
 
             if globalepoch % self.args.lrdecayepoch == 0:
                 adjust_learning_rate(optimizer, decay=self.args.lrdecay)
@@ -144,23 +144,31 @@ class TrainBase():
                 hit10 = 0
                 mr = 0
                 evalstep = 0
+                mr_t = 0
+                mr_h = 0
                 for data in test_iterator:
                     evalstep += 1
                     if self.args.usegpu:
                         data = data.cuda()
 
                     rankH, rankT = model.eval_model(data)
+                    mr_h +=rankH
+                    mr_t +=rankT
                     if evalstep % 5000 == 0:
                         print("[TEST-EPOCH(%d/%d)-STEP(%d)]mr:%f, hit@10:%f" % (
                             globalepoch, epochs, evalstep, mr / evalstep, hit10 / evalstep))
                     mr += (rankH + rankT) / 2
-                    if rankT <= 10:
+                    if (rankH + rankT) / 2 <= 10:
                         hit10 += 1
 
                 mr /= evalstep
                 hit10 /= evalstep
-                self.sumwriter.add_scalar(self.args.model + 'eval/hit@10', hit10, global_step=epoch + 1)
-                self.sumwriter.add_scalar(self.args.model + 'eval/MR', mr, global_step=epoch + 1)
+                mr_t /=evalstep
+                mr_h /=evalstep
+                self.sumwriter.add_scalar(self.args.model + '/eval/hit@10', hit10, global_step=epoch + 1)
+                self.sumwriter.add_scalar(self.args.model + '/eval/MR', mr, global_step=epoch + 1)
+                self.sumwriter.add_scalar(self.args.model + '/eval/RankT', mr_t, global_step=epoch + 1)
+                self.sumwriter.add_scalar(self.args.model + '/eval/RankH', mr_h, global_step=epoch + 1)
                 variable_list = {
                     'step': globalstep,
                     'lr': lr,
