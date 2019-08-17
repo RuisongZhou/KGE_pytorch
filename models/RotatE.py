@@ -104,10 +104,13 @@ class RotatE(nn.Module):
         h = self.ent_embeddings(batch_h)
         t = self.ent_embeddings(batch_t)
         r = self.rel_embeddings(batch_r)
+        if mode=='head-batch':
+            h = self.ent_embeddings.weight.data.repeat(len(h), 1, 1)
+        else:
+            t = self.ent_embeddings.weight.data.repeat(len(h), 1, 1)
 
         re_head, im_head = torch.chunk(h, 2, dim=2)
         re_tail, im_tail = torch.chunk(t, 2, dim=2)
-
         # Make phases of relations uniformly distributed in [-pi, pi]
 
         phase_relation = r / (self.embedding_range.item() / pi)
@@ -115,7 +118,7 @@ class RotatE(nn.Module):
         re_relation = torch.cos(phase_relation)
         im_relation = torch.sin(phase_relation)
 
-        if self.mode == 'head-batch':
+        if mode == 'head-batch':
             re_score = re_relation * re_tail + im_relation * im_tail
             im_score = re_relation * im_tail - im_relation * re_tail
             re_score = re_score - re_head
@@ -132,9 +135,9 @@ class RotatE(nn.Module):
 
         argsort = torch.argsort(score, dim=1, descending=True)
         if mode == 'head-batch':
-            positive_arg = batch_h
+            positive_arg = batch_h.squeeze()
         elif mode == 'tail-batch':
-            positive_arg = batch_t
+            positive_arg = batch_t.squeeze()
         else:
             raise ValueError('mode %s not supported' % self.mode)
 

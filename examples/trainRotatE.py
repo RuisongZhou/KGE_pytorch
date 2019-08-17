@@ -152,8 +152,8 @@ class RotatEModel(TrainBase):
 if __name__ == '__main__':
     config = Config.Config()
     config.model = 'RotatE'
-    config.batch_size = 1024
-    config.eval_batch_size = 512
+    config.batch_size = 256
+    config.eval_batch_size = 16
     config.learningrate = 0.0001
     config.lrdecay = 1.0
     config.init()

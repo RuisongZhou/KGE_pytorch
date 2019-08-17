@@ -215,7 +215,7 @@ class RotatE_config():
     def __init__(self):
         self.negative_adversarial_sampling = True
         self.adversarial_temperature = 1.0
-        self.regularization = 1.0
+        self.regularization = 0
         self.uni_weight = True
         self.gamma = 12.0
         self.hidden_size = 256 # model will automatically double it
